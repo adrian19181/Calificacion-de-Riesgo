@@ -1,20 +1,30 @@
+import io
 import os
 import re
-import pandas as pd
+import webbrowser
 import numpy as np
+import pandas as pd
+import requests
 import streamlit as st
 
 # =========================================================================
-# CONFIGURACIÓN GENERAL DE LA APLICACIÓN STREAMLIT
+# CONFIGURACIÓN GENERAL Y APERTURA DE NAVEGADOR
 # =========================================================================
 st.set_page_config(
     page_title="Mejor Calificación de Riesgo",
     page_icon="🏆",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
-RUTA_EXCEL = r"C:\Users\ADRIAN NARVAEZ\Desktop\archivos escritorio\python calificaciones de riesgo\Calificaciones_Riesgo.xlsx"
+if "browser_opened" not in st.session_state:
+  st.session_state["browser_opened"] = True
+  webbrowser.open("http://localhost:8501")
+
+FILE_ID = "1ZtmezQ9fQfpUmpRdHa66Fp0j733j5qwv"
+URL_DRIVE_DOWNLOAD = (
+    f"https://drive.google.com/uc?export=download&id={FILE_ID}"
+)
 
 # =========================================================================
 # DICCIONARIO DE EQUIVALENCIAS Y LÓGICA DE CONVERSIÓN
@@ -39,158 +49,214 @@ TABLA_EQUIVALENCIAS = {
     "B-": 20.0,
     "C": 15.0,
     "D": 5.0,
-    "E": 0.0
+    "E": 0.0,
 }
 
+
 def obtener_puntaje_nota(nota):
-    if pd.isna(nota) or str(nota).strip().upper() in ["N/A", "", "NAN", "NONE"]:
-        return np.nan
-    
-    nota_limpia = str(nota).strip().upper()
-    nota_limpia = re.sub(r'[*.]', '', nota_limpia)
-    
-    if "/" in nota_limpia:
-        partes = [p.strip() for p in nota_limpia.split("/") if p.strip()]
-        puntajes = []
-        for p in partes:
-            if p in TABLA_EQUIVALENCIAS:
-                puntajes.append(TABLA_EQUIVALENCIAS[p])
-        return np.mean(puntajes) if puntajes else np.nan
-    
-    return TABLA_EQUIVALENCIAS.get(nota_limpia, np.nan)
+  if pd.isna(nota) or str(nota).strip().upper() in ["N/A", "", "NAN", "NONE"]:
+    return np.nan
 
-@st.cache_data(ttl=60)
-def cargar_datos_excel():
-    if not os.path.exists(RUTA_EXCEL):
-        return None, None
-    try:
-        xls = pd.ExcelFile(RUTA_EXCEL)
-        df_bancos = pd.read_excel(xls, sheet_name="Bancos") if "Bancos" in xls.sheet_names else pd.DataFrame()
-        df_coop = pd.read_excel(xls, sheet_name="Cooperativas") if "Cooperativas" in xls.sheet_names else pd.DataFrame()
-        return df_coop, df_bancos
-    except Exception as e:
-        st.error(f"Error al cargar el archivo Excel: {e}")
-        return None, None
+  nota_limpia = str(nota).strip().upper()
+  nota_limpia = re.sub(r'[*.]', '', nota_limpia)
 
-df_coop_raw, df_bancos_raw = cargar_datos_excel()
+  if '/' in nota_limpia:
+    partes = [p.strip() for p in nota_limpia.split('/') if p.strip()]
+    puntajes = []
+    for p in partes:
+      if p in TABLA_EQUIVALENCIAS:
+        puntajes.append(TABLA_EQUIVALENCIAS[p])
+    return np.mean(puntajes) if puntajes else np.nan
+
+  return TABLA_EQUIVALENCIAS.get(nota_limpia, np.nan)
+
+
+@st.cache_data(ttl=300)
+def cargar_datos_desde_drive():
+  try:
+    response = requests.get(URL_DRIVE_DOWNLOAD, timeout=30)
+    response.raise_for_status()
+    excel_bytes = io.BytesIO(response.content)
+    xls = pd.ExcelFile(excel_bytes)
+
+    df_bancos = (
+        pd.read_excel(xls, sheet_name='Bancos')
+        if 'Bancos' in xls.sheet_names
+        else pd.DataFrame()
+    )
+    df_coop = (
+        pd.read_excel(xls, sheet_name='Cooperativas')
+        if 'Cooperativas' in xls.sheet_names
+        else pd.DataFrame()
+    )
+
+    return df_coop, df_bancos
+  except Exception as e:
+    st.error(
+        f'❌ Error al descargar o leer el archivo Excel desde Google Drive:'
+        f' {e}'
+    )
+    return None, None
+
+
+df_coop_raw, df_bancos_raw = cargar_datos_desde_drive()
 
 # =========================================================================
 # TÍTULO PRINCIPAL
 # =========================================================================
-st.title("🏆 Mejor Calificación de Riesgo")
-st.markdown("Sistema integral de ranking y consulta interactiva de Calificaciones de Riesgo de Instituciones Financieras del Ecuador.")
+st.title('🏆 Mejor Calificación de Riesgo')
+st.markdown(
+    'Sistema integral de ranking y consulta interactiva en tiempo real'
+    ' conectado a Google Drive.'
+)
 
 if df_coop_raw is None or df_bancos_raw is None:
-    st.error(f"❌ No se encontró el archivo de datos en la ruta esperada:\n`{RUTA_EXCEL}`")
-    st.stop()
+  st.stop()
 
 # =========================================================================
 # ESTRUCTURA DE PESTAÑAS Y PROCESAMIENTO
 # =========================================================================
-tab_coop, tab_bancos = st.tabs(["🏦 Cooperativas (Segmento 1)", "🏛️ Bancos"])
+tab_coop, tab_bancos = st.tabs(['🏦 Cooperativas (Segmento 1)', '🏛️ Bancos'])
+
 
 def procesar_vista_tab(df_raw, tipo_entidad):
-    if df_raw.empty:
-        st.warning(f"No hay datos registrados para {tipo_entidad}.")
-        return
+  if df_raw.empty:
+    st.warning(f'No hay datos registrados para {tipo_entidad}.')
+    return
 
-    columnas_base = [c for c in df_raw.columns if not c.startswith("AL ")]
-    columnas_periodos = [c for c in df_raw.columns if c.startswith("AL ")]
+  columnas_base = [c for c in df_raw.columns if not c.startswith('AL ')]
+  columnas_periodos = [c for c in df_raw.columns if c.startswith('AL ')]
 
-    df_puntajes = df_raw.copy()
-    for col in columnas_periodos:
-        df_puntajes[f"PUNTS_{col}"] = df_raw[col].apply(obtener_puntaje_nota)
+  df_puntajes = df_raw.copy()
+  for col in columnas_periodos:
+    df_puntajes[f'PUNTS_{col}'] = df_raw[col].apply(obtener_puntaje_nota)
 
-    st.subheader(f"📊 Ranking General de {tipo_entidad}")
-    col_filtro, col_vacia = st.columns([2, 2])
-    with col_filtro:
-        opciones_periodo = {
-            "Último periodo (Corte más reciente)": 1,
-            "Últimos 2 periodos": 2,
-            "Últimos 3 periodos": 3,
-            "Todos los periodos": len(columnas_periodos)
-        }
-        periodo_sel = st.radio(
-            f"Seleccione el horizonte de evaluación para el Ranking de {tipo_entidad}:",
-            options=list(opciones_periodo.keys()),
-            horizontal=True
-        )
-    
-    num_periodos = opciones_periodo[periodo_sel]
-    cols_evaluadas = columnas_periodos[-num_periodos:]
-    cols_puntajes_evaluados = [f"PUNTS_{c}" for c in cols_evaluadas]
-
-    df_ranking = df_raw.copy()
-    df_ranking["Puntaje Promedio"] = df_puntajes[cols_puntajes_evaluados].mean(axis=1, skipna=True)
-    df_ranking = df_ranking.sort_values(by="Puntaje Promedio", ascending=False).reset_index(drop=True)
-    df_ranking.index += 1
-    df_ranking.index.name = "Posición"
-
-    m1, m2, m3 = st.columns(3)
-    entidad_top = df_ranking.iloc[0]["INSTITUCIÓN FINANCIERA"] if not df_ranking.empty else "N/A"
-    puntaje_top = df_ranking.iloc[0]["Puntaje Promedio"] if not df_ranking.empty else 0.0
-    promedio_general = df_ranking["Puntaje Promedio"].mean()
-
-    m1.metric("🥇 Líder del Ranking", entidad_top, f"{puntaje_top:.1f} pts" if pd.notna(puntaje_top) else "N/A")
-    m2.metric("📈 Promedio Sectorial", f"{promedio_general:.1f} pts" if pd.notna(promedio_general) else "N/A")
-    m3.metric("🏢 Total Entidades Evaluadas", len(df_ranking))
-
-    columnas_mostrar = columnas_base + columnas_periodos + ["Puntaje Promedio"]
-    st.dataframe(
-        df_ranking[columnas_mostrar].style.format({"Puntaje Promedio": "{:.1f}"}, na_rep="N/A"),
-        use_container_width=True,
-        height=380
+  st.subheader(f'📊 Ranking General de {tipo_entidad}')
+  col_filtro, _ = st.columns([2, 2])
+  with col_filtro:
+    opciones_periodo = {
+        'Último periodo (Corte más reciente)': 1,
+        'Últimos 2 periodos': 2,
+        'Últimos 3 periodos': 3,
+        'Todos los periodos': len(columnas_periodos),
+    }
+    periodo_sel = st.radio(
+        f'Seleccione el horizonte de evaluación para el Ranking de'
+        f' {tipo_entidad}:',
+        options=list(opciones_periodo.keys()),
+        horizontal=True,
     )
 
-    st.markdown("---")
-    st.subheader(f"🔍 Búsqueda e Historial Individual de {tipo_entidad}")
-    st.caption("Escriba o seleccione el nombre de la entidad en la casilla inferior para autocompletar y filtrar en tiempo real.")
+  num_periodos = opciones_periodo[periodo_sel]
+  cols_evaluadas = columnas_periodos[-num_periodos:]
+  cols_puntajes_evaluados = [f'PUNTS_{c}' for c in cols_evaluadas]
 
-    lista_entidades = sorted(df_raw["INSTITUCIÓN FINANCIERA"].dropna().unique())
-    entidad_seleccionada = st.selectbox(
-        f"Ingrese o seleccione el nombre de la institución ({tipo_entidad}):",
-        options=["-- Seleccione una entidad --"] + lista_entidades,
-        index=0,
-        key=f"search_{tipo_entidad}"
-    )
+  df_ranking = df_raw.copy()
+  df_ranking['Puntaje Promedio'] = df_puntajes[
+      cols_puntajes_evaluados
+  ].mean(axis=1, skipna=True)
+  df_ranking = df_ranking.sort_values(
+      by='Puntaje Promedio', ascending=False
+  ).reset_index(drop=True)
+  df_ranking.index += 1
+  df_ranking.index.name = 'Posición'
 
-    if entidad_seleccionada != "-- Seleccione una entidad --":
-        registro_entidad = df_raw[df_raw["INSTITUCIÓN FINANCIERA"] == entidad_seleccionada]
-        registro_puntajes = df_puntajes[df_puntajes["INSTITUCIÓN FINANCIERA"] == entidad_seleccionada]
+  m1, m2, m3 = st.columns(3)
+  entidad_top = (
+      df_ranking.iloc[0]['INSTITUCIÓN FINANCIERA']
+      if not df_ranking.empty
+      else 'N/A'
+  )
+  puntaje_top = (
+      df_ranking.iloc[0]['Puntaje Promedio'] if not df_ranking.empty else 0.0
+  )
+  promedio_general = df_ranking['Puntaje Promedio'].mean()
 
-        if not registro_entidad.empty:
-            st.success(f"📌 Resultados para: **{entidad_seleccionada}**")
-            
-            row_entidad = registro_entidad.iloc[0]
-            row_puntajes = registro_puntajes.iloc[0]
+  m1.metric(
+      '🥇 Líder del Ranking',
+      entidad_top,
+      f'{puntaje_top:.1f} pts' if pd.notna(puntaje_top) else 'N/A',
+  )
+  m2.metric(
+      '📈 Promedio Sectorial',
+      f'{promedio_general:.1f} pts' if pd.notna(promedio_general) else 'N/A',
+  )
+  m3.metric('🏢 Total Entidades Evaluadas', len(df_ranking))
 
-            col_a, col_b, col_c = st.columns(3)
-            with col_a:
-                calificadora = row_entidad.get("FIRMA CALIFICADORA DE RIESGO", "N/A")
-                st.info(f"**Firma Calificadora:**\n\n{calificadora}")
-            with col_b:
-                ult_col = columnas_periodos[-1]
-                ult_nota = row_entidad[ult_col]
-                st.info(f"**Última Calificación ({ult_col}):**\n\n### {ult_nota}")
-            with col_c:
-                ult_pts = row_puntajes[f"PUNTS_{ult_col}"]
-                pts_texto = f"{ult_pts:.1f} / 100" if pd.notna(ult_pts) else "N/A"
-                st.info(f"**Puntaje Numérico Actual:**\n\n### {pts_texto}")
+  columnas_mostrar = columnas_base + columnas_periodos + ['Puntaje Promedio']
+  st.dataframe(
+      df_ranking[columnas_mostrar].style.format(
+          {'Puntaje Promedio': '{:.1f}'}, na_rep='N/A'
+      ),
+      use_container_width=True,
+      height=380,
+  )
 
-            st.markdown("##### 📋 Historial Completo de Calificaciones por Periodo")
-            df_historial = pd.DataFrame({
-                "Periodo de Corte": columnas_periodos,
-                "Calificación de Riesgo": [row_entidad[c] for c in columnas_periodos],
-                "Puntaje Equivalente (0-100)": [row_puntajes[f"PUNTS_{c}"] for c in columnas_periodos]
-            })
+  st.markdown('---')
+  st.subheader(f'🔍 Búsqueda e Historial Individual de {tipo_entidad}')
+  st.caption(
+      'Escriba o seleccione el nombre de la entidad en la casilla inferior'
+      ' para autocompletar y filtrar en tiempo real.'
+  )
 
-            st.dataframe(
-                df_historial.style.format({"Puntaje Equivalente (0-100)": "{:.1f}"}, na_rep="N/A"),
-                use_container_width=True
-            )
+  lista_entidades = sorted(df_raw['INSTITUCIÓN FINANCIERA'].dropna().unique())
+  entidad_seleccionada = st.selectbox(
+      f'Ingrese o seleccione el nombre de la institución ({tipo_entidad}):',
+      options=['-- Seleccione una entidad --'] + lista_entidades,
+      index=0,
+      key=f'search_{tipo_entidad}',
+  )
+
+  if entidad_seleccionada != '-- Seleccione una entidad --':
+    registro_entidad = df_raw[
+        df_raw['INSTITUCIÓN FINANCIERA'] == entidad_seleccionada
+    ]
+    registro_puntajes = df_puntajes[
+        df_puntajes['INSTITUCIÓN FINANCIERA'] == entidad_seleccionada
+    ]
+
+    if not registro_entidad.empty:
+      st.success(f'📌 Resultados para: **{entidad_seleccionada}**')
+
+      row_entidad = registro_entidad.iloc[0]
+      row_puntajes = registro_puntajes.iloc[0]
+
+      col_a, col_b, col_c = st.columns(3)
+      with col_a:
+        calificadora = row_entidad.get('FIRMA CALIFICADORA DE RIESGO', 'N/A')
+        st.info(f'**Firma Calificadora:**\n\n{calificadora}')
+      with col_b:
+        ult_col = columnas_periodos[-1]
+        ult_nota = row_entidad[ult_col]
+        st.info(f'**Última Calificación ({ult_col}):**\n\n### {ult_nota}')
+      with col_c:
+        ult_pts = row_puntajes[f'PUNTS_{ult_col}']
+        pts_texto = f'{ult_pts:.1f} / 100' if pd.notna(ult_pts) else 'N/A'
+        st.info(f'**Puntaje Numérico Actual:**\n\n### {pts_texto}')
+
+      st.markdown(
+          '##### 📋 Historial Completo de Calificaciones por Periodo'
+      )
+      df_historial = pd.DataFrame({
+          'Periodo de Corte': columnas_periodos,
+          'Calificación de Riesgo': [
+              row_entidad[c] for c in columnas_periodos
+          ],
+          'Puntaje Equivalente (0-100)': [
+              row_puntajes[f'PUNTS_{c}'] for c in columnas_periodos
+          ],
+      })
+
+      st.dataframe(
+          df_historial.style.format(
+              {'Puntaje Equivalente (0-100)': '{:.1f}'}, na_rep='N/A'
+          ),
+          use_container_width=True,
+      )
+
 
 with tab_coop:
-    procesar_vista_tab(df_coop_raw, "Cooperativas")
+  procesar_vista_tab(df_coop_raw, 'Cooperativas')
 
 with tab_bancos:
-    procesar_vista_tab(df_bancos_raw, "Bancos")
+  procesar_vista_tab(df_bancos_raw, 'Bancos')
