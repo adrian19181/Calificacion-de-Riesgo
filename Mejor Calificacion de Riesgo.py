@@ -180,13 +180,21 @@ def procesar_vista_tab(df_raw, tipo_entidad):
   df_ranking.index.name = 'Posición'
 
   m1, m2, m3 = st.columns(3)
+
+  # Exclusión de Corporación Nacional de Finanzas Populares únicamente para la tarjeta de Líder del Ranking
+  df_lideres = df_ranking[
+      ~df_ranking['INSTITUCIÓN FINANCIERA'].str.contains(
+          'CORPORACIÓN NACIONAL DE FINANZAS POPULARES', case=False, na=False
+      )
+  ]
+
   entidad_top = (
-      df_ranking.iloc[0]['INSTITUCIÓN FINANCIERA']
-      if not df_ranking.empty
+      df_lideres.iloc[0]['INSTITUCIÓN FINANCIERA']
+      if not df_lideres.empty
       else 'N/A'
   )
   puntaje_top = (
-      df_ranking.iloc[0]['Puntaje Promedio'] if not df_ranking.empty else 0.0
+      df_lideres.iloc[0]['Puntaje Promedio'] if not df_lideres.empty else 0.0
   )
   promedio_general = df_ranking['Puntaje Promedio'].mean()
 
