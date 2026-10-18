@@ -1,6 +1,7 @@
 import io
 import os
 import re
+import sys
 import webbrowser
 import numpy as np
 import pandas as pd
@@ -8,18 +9,35 @@ import requests
 import streamlit as st
 
 # =========================================================================
-# CONFIGURACIÓN GENERAL Y APERTURA DE NAVEGADOR
+# CONFIGURACIÓN GENERAL Y OPTIMIZACIÓN MÓVIL
 # =========================================================================
 st.set_page_config(
     page_title="Mejor Calificación de Riesgo",
     page_icon="🏆",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
+)
+
+st.markdown(
+    """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    .block-container {padding-top: 0.5rem; padding-bottom: 1rem;}
+    </style>
+""",
+    unsafe_allow_html=True,
 )
 
 if "browser_opened" not in st.session_state:
   st.session_state["browser_opened"] = True
-  webbrowser.open("http://localhost:8501")
+  try:
+    webbrowser.open("http://localhost:8501")
+  except Exception:
+    pass
+
+if st.button("🔄 Actualizar Datos"):
+  st.rerun()
 
 FILE_ID = "1ZtmezQ9fQfpUmpRdHa66Fp0j733j5qwv"
 URL_DRIVE_DOWNLOAD = (
@@ -172,11 +190,22 @@ def procesar_vista_tab(df_raw, tipo_entidad):
   )
   promedio_general = df_ranking['Puntaje Promedio'].mean()
 
-  m1.metric(
-      '🥇 Líder del Ranking',
-      entidad_top,
-      f'{puntaje_top:.1f} pts' if pd.notna(puntaje_top) else 'N/A',
-  )
+  with m1:
+    st.markdown(
+        f"""
+        <div style="background-color: #0E1117; padding: 12px; border-radius: 8px; border: 1px solid #262730;">
+            <span style="font-size: 0.85rem; color: #FAFAFA; font-weight: 500;">🥇 Líder del Ranking</span>
+            <div style="font-size: 1.15rem; font-weight: bold; color: #FFFFFF; word-wrap: break-word; white-space: normal; line-height: 1.3; margin-top: 4px; margin-bottom: 6px;">
+                {entidad_top}
+            </div>
+            <span style="background-color: #1E3A2B; color: #4ADE80; padding: 2px 8px; border-radius: 10px; font-size: 0.85rem; font-weight: bold;">
+                ↑ {puntaje_top:.1f} pts
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
   m2.metric(
       '📈 Promedio Sectorial',
       f'{promedio_general:.1f} pts' if pd.notna(promedio_general) else 'N/A',
@@ -260,3 +289,7 @@ with tab_coop:
 
 with tab_bancos:
   procesar_vista_tab(df_bancos_raw, 'Bancos')
+
+if __name__ == '__main__':
+  if 'streamlit' not in sys.argv[0]:
+    os.system(f'streamlit run "{__file__}" --server.port 8501')
