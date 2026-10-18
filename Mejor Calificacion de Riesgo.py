@@ -123,10 +123,6 @@ df_coop_raw, df_bancos_raw = cargar_datos_desde_drive()
 # TÍTULO PRINCIPAL
 # =========================================================================
 st.title('🏆 Mejor Calificación de Riesgo')
-st.markdown(
-    'Sistema integral de ranking y consulta interactiva en tiempo real'
-    ' conectado a Google Drive.'
-)
 
 if df_coop_raw is None or df_bancos_raw is None:
   st.stop()
