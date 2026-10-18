@@ -181,10 +181,13 @@ def procesar_vista_tab(df_raw, tipo_entidad):
 
   m1, m2, m3 = st.columns(3)
 
-  # Exclusión de Corporación Nacional de Finanzas Populares únicamente para la tarjeta de Líder del Ranking
+  # Exclusión de Corporación Nacional de Finanzas Populares y Caja Central Financoop para la tarjeta del Líder
+  entidades_excluidas = (
+      'CORPORACIÓN NACIONAL DE FINANZAS POPULARES|CAJA CENTRAL FINANCOOP'
+  )
   df_lideres = df_ranking[
       ~df_ranking['INSTITUCIÓN FINANCIERA'].str.contains(
-          'CORPORACIÓN NACIONAL DE FINANZAS POPULARES', case=False, na=False
+          entidades_excluidas, case=False, na=False
       )
   ]
 
