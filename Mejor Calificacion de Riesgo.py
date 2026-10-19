@@ -98,28 +98,38 @@ def obtener_puntaje_nota(nota):
   return TABLA_EQUIVALENCIAS.get(nota_limpia, np.nan)
 
 
-def renderizar_tabla_html_movil(df):
+# =========================================================================
+# RENDERIZADOR DE TABLA HTML/CSS PERSONALIZADA CON SCROLL 2D Y COLUMNA FIJA
+# =========================================================================
+def renderizar_tabla_html_2d(df):
   css = """
     <style>
-    .tabla-contenedor {
+    .tabla-contenedor-2d {
         width: 100%;
+        max-height: 460px;
         overflow-x: auto;
+        overflow-y: auto;
+        padding: 0px;
         margin-top: 10px;
         margin-bottom: 15px;
         border: 1px solid #262730;
         border-radius: 8px;
+        background-color: #0E1117;
     }
-    .tabla-movil {
+    .tabla-excel-2d {
         width: 100%;
         border-collapse: collapse;
         font-family: system-ui, -apple-system, sans-serif;
-        font-size: 0.82rem;
+        font-size: 0.80rem;
         color: #FAFAFA;
         background-color: #0E1117;
     }
-    .tabla-movil th {
-        background-color: #1E222D;
-        color: #FFFFFF;
+    .tabla-excel-2d th {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 20 !important;
+        background-color: #1E222D !important;
+        color: #FFFFFF !important;
         font-weight: 600;
         text-align: center;
         padding: 8px 6px;
@@ -127,7 +137,20 @@ def renderizar_tabla_html_movil(df):
         white-space: normal;
         word-wrap: break-word;
     }
-    .tabla-movil td {
+    .tabla-excel-2d th:first-child {
+        position: sticky !important;
+        top: 0 !important;
+        left: 0 !important;
+        z-index: 50 !important;
+        background-color: #1E222D !important;
+        width: 125px !important;
+        min-width: 125px !important;
+        max-width: 125px !important;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.5) !important;
+    }
+    .tabla-excel-2d td {
+        position: static !important;
+        z-index: auto !important;
         padding: 8px 6px;
         border: 1px solid #262730;
         text-align: center;
@@ -136,38 +159,58 @@ def renderizar_tabla_html_movil(df):
         word-wrap: break-word;
         line-height: 1.25;
     }
-    .tabla-movil td:nth-child(1) {
-        text-align: left;
-        max-width: 140px;
+    .tabla-excel-2d td.lbl-sticky-col {
+        position: sticky !important;
+        left: 0 !important;
+        z-index: 30 !important;
+        background-color: #0E1117 !important;
+        background-clip: padding-box !important;
+        text-align: left !important;
+        width: 125px !important;
+        min-width: 125px !important;
+        max-width: 125px !important;
         font-weight: 500;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.5) !important;
     }
-    .tabla-movil td:nth-child(2) {
-        max-width: 110px;
+    .tabla-excel-2d tr.row-even td {
+        background-color: #161B22 !important;
     }
-    .tabla-movil tr:nth-child(even) {
-        background-color: #161B22;
+    .tabla-excel-2d tr.row-even td.lbl-sticky-col {
+        background-color: #161B22 !important;
     }
     </style>
     """
-  html = css + '<div class="tabla-contenedor"><table class="tabla-movil"><thead><tr>'
-  for col in df.columns:
-    html += f'<th>{col}</th>'
-  html += '</tr></thead><tbody>'
+  html = [
+      css,
+      (
+          '<div class="tabla-contenedor-2d"><table'
+          ' class="tabla-excel-2d"><thead><tr>'
+      ),
+  ]
 
-  for _, row in df.iterrows():
-    html += '<tr>'
-    for col_name, val in row.items():
+  for col in df.columns:
+    html.append(f'<th>{col}</th>')
+  html.append('</tr></thead><tbody>')
+
+  for row_idx, (_, row) in enumerate(df.iterrows()):
+    row_class = 'row-even' if row_idx % 2 == 1 else 'row-odd'
+    html.append(f'<tr class="{row_class}">')
+    for c_idx, (col_name, val) in enumerate(row.items()):
       if pd.isna(val):
         val_str = 'N/A'
       elif isinstance(val, float):
         val_str = f'{val:.1f}'
       else:
         val_str = str(val)
-      html += f'<td>{val_str}</td>'
-    html += '</tr>'
 
-  html += '</tbody></table></div>'
-  st.markdown(html, unsafe_allow_html=True)
+      if c_idx == 0:
+        html.append(f'<td class="lbl-sticky-col">{val_str}</td>')
+      else:
+        html.append(f'<td>{val_str}</td>')
+    html.append('</tr>')
+
+  html.append('</tbody></table></div>')
+  st.markdown(''.join(html), unsafe_allow_html=True)
 
 
 @st.cache_data(ttl=300)
@@ -303,7 +346,7 @@ def procesar_vista_tab(df_raw, tipo_entidad):
   columnas_mostrar = columnas_base + columnas_periodos + ['Puntaje Promedio']
   df_tabla_final = df_ranking[columnas_mostrar].copy()
 
-  renderizar_tabla_html_movil(df_tabla_final)
+  renderizar_tabla_html_2d(df_tabla_final)
 
   st.markdown('---')
   st.subheader(f'🔍 Búsqueda e Historial Individual de {tipo_entidad}')
@@ -360,7 +403,7 @@ def procesar_vista_tab(df_raw, tipo_entidad):
           ],
       })
 
-      renderizar_tabla_html_movil(df_historial)
+      renderizar_tabla_html_2d(df_historial)
 
 
 with tab_coop:
