@@ -35,14 +35,31 @@ components.html(
     """
     <script>
     const doc = window.parent.document;
-    doc.addEventListener('focusin', function(e) {
+    
+    doc.addEventListener('pointerdown', function(e) {
         if (e.target && e.target.tagName === 'INPUT') {
-            e.target.select();
+            if (doc.activeElement !== e.target) {
+                setTimeout(function() {
+                    e.target.select();
+                }, 50);
+            }
         }
     }, true);
-    doc.addEventListener('click', function(e) {
+    
+    doc.addEventListener('focusin', function(e) {
         if (e.target && e.target.tagName === 'INPUT') {
-            e.target.select();
+            if (!e.target.dataset.hasAutoSelected) {
+                e.target.dataset.hasAutoSelected = 'true';
+                setTimeout(function() {
+                    e.target.select();
+                }, 50);
+            }
+        }
+    }, true);
+
+    doc.addEventListener('focusout', function(e) {
+        if (e.target && e.target.tagName === 'INPUT') {
+            delete e.target.dataset.hasAutoSelected;
         }
     }, true);
     </script>
