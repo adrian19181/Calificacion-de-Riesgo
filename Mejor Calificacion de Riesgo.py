@@ -37,16 +37,13 @@ if "browser_opened" not in st.session_state:
     pass
 
 # =========================================================================
-# BOTÓN OBLIGATORIO DE REFRESCAR AL INICIO DE LA INTERFAZ
+# TÍTULO PRINCIPAL Y BOTÓN DE REFRESCAR
 # =========================================================================
+st.title("🏆 Mejor Calificación de Riesgo")
+
 if st.button("🔄 Refrescar y Recalcular Todo", use_container_width=True):
   st.cache_data.clear()
   st.rerun()
-
-# =========================================================================
-# TÍTULO PRINCIPAL
-# =========================================================================
-st.title("🏆 Mejor Calificación de Riesgo")
 
 FILE_ID = "1ZtmezQ9fQfpUmpRdHa66Fp0j733j5qwv"
 URL_DRIVE_DOWNLOAD = (
