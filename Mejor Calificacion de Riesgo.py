@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import requests
 import streamlit as st
-import streamlit.components.v1 as components
 
 # =========================================================================
 # CONFIGURACIÓN GENERAL Y OPTIMIZACIÓN MÓVIL
@@ -28,44 +27,6 @@ st.markdown(
     </style>
 """,
     unsafe_allow_html=True,
-)
-
-# Inyección JS para selección automática y sobreescritura al enfocar/tocar casillas de entrada
-components.html(
-    """
-    <script>
-    const doc = window.parent.document;
-    
-    doc.addEventListener('pointerdown', function(e) {
-        if (e.target && e.target.tagName === 'INPUT') {
-            if (doc.activeElement !== e.target) {
-                setTimeout(function() {
-                    e.target.select();
-                }, 50);
-            }
-        }
-    }, true);
-    
-    doc.addEventListener('focusin', function(e) {
-        if (e.target && e.target.tagName === 'INPUT') {
-            if (!e.target.dataset.hasAutoSelected) {
-                e.target.dataset.hasAutoSelected = 'true';
-                setTimeout(function() {
-                    e.target.select();
-                }, 50);
-            }
-        }
-    }, true);
-
-    doc.addEventListener('focusout', function(e) {
-        if (e.target && e.target.tagName === 'INPUT') {
-            delete e.target.dataset.hasAutoSelected;
-        }
-    }, true);
-    </script>
-    """,
-    height=0,
-    width=0,
 )
 
 if "browser_opened" not in st.session_state:
