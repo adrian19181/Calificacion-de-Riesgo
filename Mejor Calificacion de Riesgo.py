@@ -23,7 +23,13 @@ st.markdown(
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    .block-container {padding-top: 0.5rem; padding-bottom: 1rem;}
+    .block-container {
+        padding-top: 3.2rem !important;
+        padding-bottom: 6rem !important;
+    }
+    .espaciador-inferior {
+        height: 80px;
+    }
     </style>
 """,
     unsafe_allow_html=True,
@@ -409,6 +415,8 @@ def procesar_vista_tab(df_raw, tipo_entidad):
       })
 
       renderizar_tabla_html_2d(df_historial)
+
+  st.markdown('<div class="espaciador-inferior"></div>', unsafe_allow_html=True)
 
 
 with tab_coop:
