@@ -2,7 +2,6 @@ import io
 import os
 import re
 import sys
-import textwrap
 import webbrowser
 import numpy as np
 import pandas as pd
@@ -99,10 +98,76 @@ def obtener_puntaje_nota(nota):
   return TABLA_EQUIVALENCIAS.get(nota_limpia, np.nan)
 
 
-def dividir_en_lineas(texto, max_caracteres=20):
-  if pd.isna(texto) or not isinstance(texto, str):
-    return texto
-  return '\n'.join(textwrap.wrap(str(texto).strip(), width=max_caracteres))
+def renderizar_tabla_html_movil(df):
+  css = """
+    <style>
+    .tabla-contenedor {
+        width: 100%;
+        overflow-x: auto;
+        margin-top: 10px;
+        margin-bottom: 15px;
+        border: 1px solid #262730;
+        border-radius: 8px;
+    }
+    .tabla-movil {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 0.82rem;
+        color: #FAFAFA;
+        background-color: #0E1117;
+    }
+    .tabla-movil th {
+        background-color: #1E222D;
+        color: #FFFFFF;
+        font-weight: 600;
+        text-align: center;
+        padding: 8px 6px;
+        border: 1px solid #262730;
+        white-space: normal;
+        word-wrap: break-word;
+    }
+    .tabla-movil td {
+        padding: 8px 6px;
+        border: 1px solid #262730;
+        text-align: center;
+        vertical-align: middle;
+        white-space: normal;
+        word-wrap: break-word;
+        line-height: 1.25;
+    }
+    .tabla-movil td:nth-child(1) {
+        text-align: left;
+        max-width: 140px;
+        font-weight: 500;
+    }
+    .tabla-movil td:nth-child(2) {
+        max-width: 110px;
+    }
+    .tabla-movil tr:nth-child(even) {
+        background-color: #161B22;
+    }
+    </style>
+    """
+  html = css + '<div class="tabla-contenedor"><table class="tabla-movil"><thead><tr>'
+  for col in df.columns:
+    html += f'<th>{col}</th>'
+  html += '</tr></thead><tbody>'
+
+  for _, row in df.iterrows():
+    html += '<tr>'
+    for col_name, val in row.items():
+      if pd.isna(val):
+        val_str = 'N/A'
+      elif isinstance(val, float):
+        val_str = f'{val:.1f}'
+      else:
+        val_str = str(val)
+      html += f'<td>{val_str}</td>'
+    html += '</tr>'
+
+  html += '</tbody></table></div>'
+  st.markdown(html, unsafe_allow_html=True)
 
 
 @st.cache_data(ttl=300)
@@ -236,25 +301,9 @@ def procesar_vista_tab(df_raw, tipo_entidad):
   m3.metric('🏢 Total Entidades Evaluadas', len(df_ranking))
 
   columnas_mostrar = columnas_base + columnas_periodos + ['Puntaje Promedio']
-
   df_tabla_final = df_ranking[columnas_mostrar].copy()
 
-  if 'INSTITUCIÓN FINANCIERA' in df_tabla_final.columns:
-    df_tabla_final['INSTITUCIÓN FINANCIERA'] = df_tabla_final[
-        'INSTITUCIÓN FINANCIERA'
-    ].apply(lambda x: dividir_en_lineas(x, max_caracteres=20))
-
-  if 'FIRMA CALIFICADORA DE RIESGO' in df_tabla_final.columns:
-    df_tabla_final['FIRMA CALIFICADORA DE RIESGO'] = df_tabla_final[
-        'FIRMA CALIFICADORA DE RIESGO'
-    ].apply(lambda x: dividir_en_lineas(x, max_caracteres=16))
-
-  st.dataframe(
-      df_tabla_final.style.format({'Puntaje Promedio': '{:.1f}'}, na_rep='N/A'),
-      use_container_width=True,
-      height=420,
-      hide_index=True,
-  )
+  renderizar_tabla_html_movil(df_tabla_final)
 
   st.markdown('---')
   st.subheader(f'🔍 Búsqueda e Historial Individual de {tipo_entidad}')
@@ -311,13 +360,7 @@ def procesar_vista_tab(df_raw, tipo_entidad):
           ],
       })
 
-      st.dataframe(
-          df_historial.style.format(
-              {'Puntaje Equivalente (0-100)': '{:.1f}'}, na_rep='N/A'
-          ),
-          use_container_width=True,
-          hide_index=True,
-      )
+      renderizar_tabla_html_movil(df_historial)
 
 
 with tab_coop:
