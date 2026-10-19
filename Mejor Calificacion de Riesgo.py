@@ -139,6 +139,16 @@ def procesar_vista_tab(df_raw, tipo_entidad):
     return
 
   columnas_base = [c for c in df_raw.columns if not c.startswith('AL ')]
+
+  # Quitar columna SEGMENTO de la tabla para Cooperativas
+  if tipo_entidad == 'Cooperativas':
+    columnas_base = [c for c in columnas_base if c.upper() != 'SEGMENTO']
+
+  # Garantizar que INSTITUCIÓN FINANCIERA sea la primera columna
+  if 'INSTITUCIÓN FINANCIERA' in columnas_base:
+    columnas_base.remove('INSTITUCIÓN FINANCIERA')
+    columnas_base = ['INSTITUCIÓN FINANCIERA'] + columnas_base
+
   columnas_periodos = [c for c in df_raw.columns if c.startswith('AL ')]
 
   df_puntajes = df_raw.copy()
@@ -172,8 +182,6 @@ def procesar_vista_tab(df_raw, tipo_entidad):
   df_ranking = df_ranking.sort_values(
       by='Puntaje Promedio', ascending=False
   ).reset_index(drop=True)
-  df_ranking.index += 1
-  df_ranking.index.name = 'Posición'
 
   m1, m2, m3 = st.columns(3)
 
@@ -226,6 +234,7 @@ def procesar_vista_tab(df_raw, tipo_entidad):
       ),
       use_container_width=True,
       height=380,
+      hide_index=True,
   )
 
   st.markdown('---')
@@ -288,6 +297,7 @@ def procesar_vista_tab(df_raw, tipo_entidad):
               {'Puntaje Equivalente (0-100)': '{:.1f}'}, na_rep='N/A'
           ),
           use_container_width=True,
+          hide_index=True,
       )
 
 
