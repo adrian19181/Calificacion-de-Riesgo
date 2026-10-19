@@ -37,7 +37,11 @@ if "browser_opened" not in st.session_state:
   except Exception:
     pass
 
-if st.button("🔄 Actualizar Datos"):
+# =========================================================================
+# BOTÓN DE REFRESCAR Y LIMPIEZA DE CACHÉ
+# =========================================================================
+if st.button("🔄 Refrescar y Recalcular Todo", use_container_width=True):
+  st.cache_data.clear()
   st.rerun()
 
 FILE_ID = "1ZtmezQ9fQfpUmpRdHa66Fp0j733j5qwv"
@@ -235,7 +239,6 @@ def procesar_vista_tab(df_raw, tipo_entidad):
 
   df_tabla_final = df_ranking[columnas_mostrar].copy()
 
-  # Dar formato de 2 a 3 líneas a los nombres de entidades y calificadoras
   if 'INSTITUCIÓN FINANCIERA' in df_tabla_final.columns:
     df_tabla_final['INSTITUCIÓN FINANCIERA'] = df_tabla_final[
         'INSTITUCIÓN FINANCIERA'
