@@ -99,7 +99,7 @@ def obtener_puntaje_nota(nota):
   return TABLA_EQUIVALENCIAS.get(nota_limpia, np.nan)
 
 
-def dividir_en_lineas(texto, max_caracteres=28):
+def dividir_en_lineas(texto, max_caracteres=20):
   if pd.isna(texto) or not isinstance(texto, str):
     return texto
   return '\n'.join(textwrap.wrap(str(texto).strip(), width=max_caracteres))
@@ -242,12 +242,12 @@ def procesar_vista_tab(df_raw, tipo_entidad):
   if 'INSTITUCIÓN FINANCIERA' in df_tabla_final.columns:
     df_tabla_final['INSTITUCIÓN FINANCIERA'] = df_tabla_final[
         'INSTITUCIÓN FINANCIERA'
-    ].apply(lambda x: dividir_en_lineas(x, max_caracteres=28))
+    ].apply(lambda x: dividir_en_lineas(x, max_caracteres=20))
 
   if 'FIRMA CALIFICADORA DE RIESGO' in df_tabla_final.columns:
     df_tabla_final['FIRMA CALIFICADORA DE RIESGO'] = df_tabla_final[
         'FIRMA CALIFICADORA DE RIESGO'
-    ].apply(lambda x: dividir_en_lineas(x, max_caracteres=20))
+    ].apply(lambda x: dividir_en_lineas(x, max_caracteres=16))
 
   st.dataframe(
       df_tabla_final.style.format({'Puntaje Promedio': '{:.1f}'}, na_rep='N/A'),
