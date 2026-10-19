@@ -2,6 +2,7 @@ import io
 import os
 import re
 import sys
+import textwrap
 import webbrowser
 import numpy as np
 import pandas as pd
@@ -87,6 +88,12 @@ def obtener_puntaje_nota(nota):
     return np.mean(puntajes) if puntajes else np.nan
 
   return TABLA_EQUIVALENCIAS.get(nota_limpia, np.nan)
+
+
+def dividir_en_lineas(texto, max_caracteres=28):
+  if pd.isna(texto) or not isinstance(texto, str):
+    return texto
+  return '\n'.join(textwrap.wrap(str(texto).strip(), width=max_caracteres))
 
 
 @st.cache_data(ttl=300)
@@ -226,23 +233,24 @@ def procesar_vista_tab(df_raw, tipo_entidad):
 
   columnas_mostrar = columnas_base + columnas_periodos + ['Puntaje Promedio']
 
-  configuracion_columnas = {
-      'INSTITUCIÓN FINANCIERA': st.column_config.TextColumn(
-          'INSTITUCIÓN FINANCIERA', width='medium'
-      ),
-      'FIRMA CALIFICADORA DE RIESGO': st.column_config.TextColumn(
-          'FIRMA CALIFICADORA DE RIESGO', width='small'
-      ),
-  }
+  df_tabla_final = df_ranking[columnas_mostrar].copy()
+
+  # Dar formato de 2 a 3 líneas a los nombres de entidades y calificadoras
+  if 'INSTITUCIÓN FINANCIERA' in df_tabla_final.columns:
+    df_tabla_final['INSTITUCIÓN FINANCIERA'] = df_tabla_final[
+        'INSTITUCIÓN FINANCIERA'
+    ].apply(lambda x: dividir_en_lineas(x, max_caracteres=28))
+
+  if 'FIRMA CALIFICADORA DE RIESGO' in df_tabla_final.columns:
+    df_tabla_final['FIRMA CALIFICADORA DE RIESGO'] = df_tabla_final[
+        'FIRMA CALIFICADORA DE RIESGO'
+    ].apply(lambda x: dividir_en_lineas(x, max_caracteres=20))
 
   st.dataframe(
-      df_ranking[columnas_mostrar].style.format(
-          {'Puntaje Promedio': '{:.1f}'}, na_rep='N/A'
-      ),
+      df_tabla_final.style.format({'Puntaje Promedio': '{:.1f}'}, na_rep='N/A'),
       use_container_width=True,
-      height=380,
+      height=420,
       hide_index=True,
-      column_config=configuracion_columnas,
   )
 
   st.markdown('---')
@@ -306,11 +314,6 @@ def procesar_vista_tab(df_raw, tipo_entidad):
           ),
           use_container_width=True,
           hide_index=True,
-          column_config={
-              'Periodo de Corte': st.column_config.TextColumn(
-                  'Periodo de Corte', width='medium'
-              )
-          },
       )
 
 
