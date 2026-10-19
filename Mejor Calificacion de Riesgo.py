@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 
 # =========================================================================
 # CONFIGURACIÓN GENERAL Y OPTIMIZACIÓN MÓVIL
@@ -27,6 +28,27 @@ st.markdown(
     </style>
 """,
     unsafe_allow_html=True,
+)
+
+# Inyección JS para selección automática y sobreescritura al enfocar/tocar casillas de entrada
+components.html(
+    """
+    <script>
+    const doc = window.parent.document;
+    doc.addEventListener('focusin', function(e) {
+        if (e.target && e.target.tagName === 'INPUT') {
+            e.target.select();
+        }
+    }, true);
+    doc.addEventListener('click', function(e) {
+        if (e.target && e.target.tagName === 'INPUT') {
+            e.target.select();
+        }
+    }, true);
+    </script>
+    """,
+    height=0,
+    width=0,
 )
 
 if "browser_opened" not in st.session_state:
@@ -358,17 +380,14 @@ def procesar_vista_tab(df_raw, tipo_entidad):
 
   st.markdown('---')
   st.subheader(f'🔍 Búsqueda e Historial Individual de {tipo_entidad}')
-  st.caption(
-      'Escriba o seleccione el nombre de la entidad en la casilla inferior'
-      ' para autocompletar y filtrar en tiempo real.'
-  )
 
   lista_entidades = sorted(df_raw['INSTITUCIÓN FINANCIERA'].dropna().unique())
   entidad_seleccionada = st.selectbox(
-      f'Ingrese o seleccione el nombre de la institución ({tipo_entidad}):',
+      '',
       options=['-- Seleccione una entidad --'] + lista_entidades,
       index=0,
       key=f'search_{tipo_entidad}',
+      label_visibility='collapsed',
   )
 
   if entidad_seleccionada != '-- Seleccione una entidad --':
