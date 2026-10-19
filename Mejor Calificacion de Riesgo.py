@@ -140,11 +140,9 @@ def procesar_vista_tab(df_raw, tipo_entidad):
 
   columnas_base = [c for c in df_raw.columns if not c.startswith('AL ')]
 
-  # Quitar columna SEGMENTO de la tabla para Cooperativas
   if tipo_entidad == 'Cooperativas':
     columnas_base = [c for c in columnas_base if c.upper() != 'SEGMENTO']
 
-  # Garantizar que INSTITUCIÓN FINANCIERA sea la primera columna
   if 'INSTITUCIÓN FINANCIERA' in columnas_base:
     columnas_base.remove('INSTITUCIÓN FINANCIERA')
     columnas_base = ['INSTITUCIÓN FINANCIERA'] + columnas_base
@@ -185,7 +183,6 @@ def procesar_vista_tab(df_raw, tipo_entidad):
 
   m1, m2, m3 = st.columns(3)
 
-  # Exclusión de Corporación Nacional de Finanzas Populares y Caja Central Financoop para la tarjeta del Líder
   entidades_excluidas = (
       'CORPORACIÓN NACIONAL DE FINANZAS POPULARES|CAJA CENTRAL FINANCOOP'
   )
@@ -228,6 +225,16 @@ def procesar_vista_tab(df_raw, tipo_entidad):
   m3.metric('🏢 Total Entidades Evaluadas', len(df_ranking))
 
   columnas_mostrar = columnas_base + columnas_periodos + ['Puntaje Promedio']
+
+  configuracion_columnas = {
+      'INSTITUCIÓN FINANCIERA': st.column_config.TextColumn(
+          'INSTITUCIÓN FINANCIERA', width='medium'
+      ),
+      'FIRMA CALIFICADORA DE RIESGO': st.column_config.TextColumn(
+          'FIRMA CALIFICADORA DE RIESGO', width='small'
+      ),
+  }
+
   st.dataframe(
       df_ranking[columnas_mostrar].style.format(
           {'Puntaje Promedio': '{:.1f}'}, na_rep='N/A'
@@ -235,6 +242,7 @@ def procesar_vista_tab(df_raw, tipo_entidad):
       use_container_width=True,
       height=380,
       hide_index=True,
+      column_config=configuracion_columnas,
   )
 
   st.markdown('---')
@@ -298,6 +306,11 @@ def procesar_vista_tab(df_raw, tipo_entidad):
           ),
           use_container_width=True,
           hide_index=True,
+          column_config={
+              'Periodo de Corte': st.column_config.TextColumn(
+                  'Periodo de Corte', width='medium'
+              )
+          },
       )
 
 
