@@ -38,11 +38,16 @@ if "browser_opened" not in st.session_state:
     pass
 
 # =========================================================================
-# BOTÓN DE REFRESCAR Y LIMPIEZA DE CACHÉ
+# BOTÓN OBLIGATORIO DE REFRESCAR AL INICIO DE LA INTERFAZ
 # =========================================================================
 if st.button("🔄 Refrescar y Recalcular Todo", use_container_width=True):
   st.cache_data.clear()
   st.rerun()
+
+# =========================================================================
+# TÍTULO PRINCIPAL
+# =========================================================================
+st.title("🏆 Mejor Calificación de Riesgo")
 
 FILE_ID = "1ZtmezQ9fQfpUmpRdHa66Fp0j733j5qwv"
 URL_DRIVE_DOWNLOAD = (
@@ -129,11 +134,6 @@ def cargar_datos_desde_drive():
 
 
 df_coop_raw, df_bancos_raw = cargar_datos_desde_drive()
-
-# =========================================================================
-# TÍTULO PRINCIPAL
-# =========================================================================
-st.title('🏆 Mejor Calificación de Riesgo')
 
 if df_coop_raw is None or df_bancos_raw is None:
   st.stop()
