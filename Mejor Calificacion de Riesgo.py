@@ -290,6 +290,17 @@ def procesar_vista_tab(df_raw, tipo_entidad):
   cols_puntajes_evaluados = [f'PUNTS_{c}' for c in cols_evaluadas]
 
   df_ranking = df_raw.copy()
+
+  if 'TIPO DE ENTIDAD' in df_ranking.columns:
+    df_ranking['INSTITUCIÓN FINANCIERA'] = df_ranking.apply(
+        lambda r: f"{r['INSTITUCIÓN FINANCIERA']} ({r['TIPO DE ENTIDAD']})"
+        if pd.notna(r.get('TIPO DE ENTIDAD'))
+        and str(r.get('TIPO DE ENTIDAD')).strip()
+        else r['INSTITUCIÓN FINANCIERA'],
+        axis=1,
+    )
+    columnas_base = [c for c in columnas_base if c.upper() != 'TIPO DE ENTIDAD']
+
   df_ranking['Puntaje Promedio'] = df_puntajes[
       cols_puntajes_evaluados
   ].mean(axis=1, skipna=True)
