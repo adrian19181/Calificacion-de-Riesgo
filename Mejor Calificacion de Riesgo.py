@@ -363,6 +363,42 @@ def procesar_vista_tab(df_raw, tipo_entidad):
     columnas_mostrar = columnas_base + columnas_periodos + ['Puntaje Promedio']
     df_tabla_final = df_ranking[columnas_mostrar].copy()
 
+    # =========================================================================
+    # SECCIÓN: MIS ENTIDADES FINANCIERAS
+    # =========================================================================
+    st.markdown('---')
+    st.subheader('⭐ Mis Entidades Financieras')
+
+    if tipo_entidad == 'Cooperativas':
+        cond_mis_entidades = df_tabla_final[
+            'INSTITUCIÓN FINANCIERA'
+        ].str.contains(
+            'JARDIN AZUAYO|JARDÍN AZUAYO', case=False, na=False
+        ) | (
+            df_tabla_final['INSTITUCIÓN FINANCIERA'].str.contains(
+                'MUTUALISTA', case=False, na=False
+            )
+            & df_tabla_final['INSTITUCIÓN FINANCIERA'].str.contains(
+                'AZUAY', case=False, na=False
+            )
+        )
+    else:
+        cond_mis_entidades = df_tabla_final[
+            'INSTITUCIÓN FINANCIERA'
+        ].str.contains('AUSTRO|PRODUBANCO', case=False, na=False)
+
+    df_mis_entidades = df_tabla_final[cond_mis_entidades]
+
+    if not df_mis_entidades.empty:
+        renderizar_tabla_html_2d(df_mis_entidades)
+    else:
+        st.info('No se encontraron registros para tus entidades financieras.')
+
+    # =========================================================================
+    # SECCIÓN: TABLA DE RANKING COMPLETO
+    # =========================================================================
+    st.markdown('---')
+    st.subheader(f'📋 Ranking Completo de {tipo_entidad}')
     renderizar_tabla_html_2d(df_tabla_final)
 
     st.markdown('---')
