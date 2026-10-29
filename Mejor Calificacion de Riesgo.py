@@ -36,11 +36,11 @@ st.markdown(
 )
 
 if "browser_opened" not in st.session_state:
-  st.session_state["browser_opened"] = True
-  try:
-    webbrowser.open("http://localhost:8501")
-  except Exception:
-    pass
+    st.session_state["browser_opened"] = True
+    try:
+        webbrowser.open("http://localhost:8501")
+    except Exception:
+        pass
 
 # =========================================================================
 # TÍTULO PRINCIPAL Y BOTÓN DE REFRESCAR
@@ -48,8 +48,8 @@ if "browser_opened" not in st.session_state:
 st.title("🏆 Mejor Calificación de Riesgo")
 
 if st.button("🔄 Refrescar y Recalcular Todo", use_container_width=True):
-  st.cache_data.clear()
-  st.rerun()
+    st.cache_data.clear()
+    st.rerun()
 
 FILE_ID = "1ZtmezQ9fQfpUmpRdHa66Fp0j733j5qwv"
 URL_DRIVE_DOWNLOAD = (
@@ -84,28 +84,28 @@ TABLA_EQUIVALENCIAS = {
 
 
 def obtener_puntaje_nota(nota):
-  if pd.isna(nota) or str(nota).strip().upper() in ["N/A", "", "NAN", "NONE"]:
-    return np.nan
+    if pd.isna(nota) or str(nota).strip().upper() in ["N/A", "", "NAN", "NONE"]:
+        return np.nan
 
-  nota_limpia = str(nota).strip().upper()
-  nota_limpia = re.sub(r'[*.]', '', nota_limpia)
+    nota_limpia = str(nota).strip().upper()
+    nota_limpia = re.sub(r'[*.]', '', nota_limpia)
 
-  if '/' in nota_limpia:
-    partes = [p.strip() for p in nota_limpia.split('/') if p.strip()]
-    puntajes = []
-    for p in partes:
-      if p in TABLA_EQUIVALENCIAS:
-        puntajes.append(TABLA_EQUIVALENCIAS[p])
-    return np.mean(puntajes) if puntajes else np.nan
+    if '/' in nota_limpia:
+        partes = [p.strip() for p in nota_limpia.split('/') if p.strip()]
+        puntajes = []
+        for p in partes:
+            if p in TABLA_EQUIVALENCIAS:
+                puntajes.append(TABLA_EQUIVALENCIAS[p])
+        return np.mean(puntajes) if puntajes else np.nan
 
-  return TABLA_EQUIVALENCIAS.get(nota_limpia, np.nan)
+    return TABLA_EQUIVALENCIAS.get(nota_limpia, np.nan)
 
 
 # =========================================================================
 # RENDERIZADOR DE TABLA HTML/CSS PERSONALIZADA CON SCROLL 2D Y COLUMNA FIJA
 # =========================================================================
 def renderizar_tabla_html_2d(df):
-  css = """
+    css = """
     <style>
     .tabla-contenedor-2d {
         width: 100%;
@@ -183,71 +183,71 @@ def renderizar_tabla_html_2d(df):
     }
     </style>
     """
-  html = [
-      css,
-      (
-          '<div class="tabla-contenedor-2d"><table'
-          ' class="tabla-excel-2d"><thead><tr>'
-      ),
-  ]
+    html = [
+        css,
+        (
+            '<div class="tabla-contenedor-2d"><table'
+            ' class="tabla-excel-2d"><thead><tr>'
+        ),
+    ]
 
-  for col in df.columns:
-    html.append(f'<th>{col}</th>')
-  html.append('</tr></thead><tbody>')
+    for col in df.columns:
+        html.append(f'<th>{col}</th>')
+    html.append('</tr></thead><tbody>')
 
-  for row_idx, (_, row) in enumerate(df.iterrows()):
-    row_class = 'row-even' if row_idx % 2 == 1 else 'row-odd'
-    html.append(f'<tr class="{row_class}">')
-    for c_idx, (col_name, val) in enumerate(row.items()):
-      if pd.isna(val):
-        val_str = 'N/A'
-      elif isinstance(val, float):
-        val_str = f'{val:.1f}'
-      else:
-        val_str = str(val)
+    for row_idx, (_, row) in enumerate(df.iterrows()):
+        row_class = 'row-even' if row_idx % 2 == 1 else 'row-odd'
+        html.append(f'<tr class="{row_class}">')
+        for c_idx, (col_name, val) in enumerate(row.items()):
+            if pd.isna(val):
+                val_str = 'N/A'
+            elif isinstance(val, float):
+                val_str = f'{val:.1f}'
+            else:
+                val_str = str(val)
 
-      if c_idx == 0:
-        html.append(f'<td class="lbl-sticky-col">{val_str}</td>')
-      else:
-        html.append(f'<td>{val_str}</td>')
-    html.append('</tr>')
+            if c_idx == 0:
+                html.append(f'<td class="lbl-sticky-col">{val_str}</td>')
+            else:
+                html.append(f'<td>{val_str}</td>')
+        html.append('</tr>')
 
-  html.append('</tbody></table></div>')
-  st.markdown(''.join(html), unsafe_allow_html=True)
+    html.append('</tbody></table></div>')
+    st.markdown(''.join(html), unsafe_allow_html=True)
 
 
 @st.cache_data(ttl=300)
 def cargar_datos_desde_drive():
-  try:
-    response = requests.get(URL_DRIVE_DOWNLOAD, timeout=30)
-    response.raise_for_status()
-    excel_bytes = io.BytesIO(response.content)
-    xls = pd.ExcelFile(excel_bytes)
+    try:
+        response = requests.get(URL_DRIVE_DOWNLOAD, timeout=30)
+        response.raise_for_status()
+        excel_bytes = io.BytesIO(response.content)
+        xls = pd.ExcelFile(excel_bytes)
 
-    df_bancos = (
-        pd.read_excel(xls, sheet_name='Bancos')
-        if 'Bancos' in xls.sheet_names
-        else pd.DataFrame()
-    )
-    df_coop = (
-        pd.read_excel(xls, sheet_name='Cooperativas')
-        if 'Cooperativas' in xls.sheet_names
-        else pd.DataFrame()
-    )
+        df_bancos = (
+            pd.read_excel(xls, sheet_name='Bancos')
+            if 'Bancos' in xls.sheet_names
+            else pd.DataFrame()
+        )
+        df_coop = (
+            pd.read_excel(xls, sheet_name='Cooperativas')
+            if 'Cooperativas' in xls.sheet_names
+            else pd.DataFrame()
+        )
 
-    return df_coop, df_bancos
-  except Exception as e:
-    st.error(
-        f'❌ Error al descargar o leer el archivo Excel desde Google Drive:'
-        f' {e}'
-    )
-    return None, None
+        return df_coop, df_bancos
+    except Exception as e:
+        st.error(
+            f'❌ Error al descargar o leer el archivo Excel desde Google Drive:'
+            f' {e}'
+        )
+        return None, None
 
 
 df_coop_raw, df_bancos_raw = cargar_datos_desde_drive()
 
 if df_coop_raw is None or df_bancos_raw is None:
-  st.stop()
+    st.stop()
 
 # =========================================================================
 # ESTRUCTURA DE PESTAÑAS Y PROCESAMIENTO
@@ -256,175 +256,178 @@ tab_coop, tab_bancos = st.tabs(['🏦 Cooperativas (Segmento 1)', '🏛️ Banco
 
 
 def procesar_vista_tab(df_raw, tipo_entidad):
-  if df_raw.empty:
-    st.warning(f'No hay datos registrados para {tipo_entidad}.')
-    return
+    if df_raw.empty:
+        st.warning(f'No hay datos registrados para {tipo_entidad}.')
+        return
 
-  columnas_base = [c for c in df_raw.columns if not c.startswith('AL ')]
+    columnas_base = [c for c in df_raw.columns if not c.startswith('AL ')]
 
-  if tipo_entidad == 'Cooperativas':
-    columnas_base = [c for c in columnas_base if c.upper() != 'SEGMENTO']
+    if tipo_entidad == 'Cooperativas':
+        columnas_base = [c for c in columnas_base if c.upper() != 'SEGMENTO']
 
-  if 'INSTITUCIÓN FINANCIERA' in columnas_base:
-    columnas_base.remove('INSTITUCIÓN FINANCIERA')
-    columnas_base = ['INSTITUCIÓN FINANCIERA'] + columnas_base
+    if 'INSTITUCIÓN FINANCIERA' in columnas_base:
+        columnas_base.remove('INSTITUCIÓN FINANCIERA')
+        columnas_base = ['INSTITUCIÓN FINANCIERA'] + columnas_base
 
-  columnas_periodos = [c for c in df_raw.columns if c.startswith('AL ')]
+    columnas_periodos = [c for c in df_raw.columns if c.startswith('AL ')]
 
-  df_puntajes = df_raw.copy()
-  for col in columnas_periodos:
-    df_puntajes[f'PUNTS_{col}'] = df_raw[col].apply(obtener_puntaje_nota)
+    df_puntajes = df_raw.copy()
+    for col in columnas_periodos:
+        df_puntajes[f'PUNTS_{col}'] = df_raw[col].apply(obtener_puntaje_nota)
 
-  st.subheader(f'📊 Ranking General de {tipo_entidad}')
-  col_filtro, _ = st.columns([2, 2])
-  with col_filtro:
-    opciones_periodo = {
-        'Último periodo (Corte más reciente)': 1,
-        'Últimos 2 periodos': 2,
-        'Últimos 3 periodos': 3,
-        'Todos los periodos': len(columnas_periodos),
-    }
-    periodo_sel = st.radio(
-        f'Seleccione el horizonte de evaluación para el Ranking de'
-        f' {tipo_entidad}:',
-        options=list(opciones_periodo.keys()),
-        horizontal=True,
+    st.subheader(f'📊 Ranking General de {tipo_entidad}')
+    col_filtro, _ = st.columns([2, 2])
+    with col_filtro:
+        opciones_periodo = {
+            'Último periodo (Corte más reciente)': 1,
+            'Últimos 2 periodos': 2,
+            'Últimos 3 periodos': 3,
+            'Todos los periodos': len(columnas_periodos),
+        }
+        periodo_sel = st.radio(
+            f'Seleccione el horizonte de evaluación para el Ranking de'
+            f' {tipo_entidad}:',
+            options=list(opciones_periodo.keys()),
+            horizontal=True,
+        )
+
+    num_periodos = opciones_periodo[periodo_sel]
+    cols_evaluadas = columnas_periodos[-num_periodos:]
+    cols_puntajes_evaluados = [f'PUNTS_{c}' for c in cols_evaluadas]
+
+    df_ranking = df_raw.copy()
+
+    if 'TIPO DE ENTIDAD' in df_ranking.columns:
+        df_ranking['INSTITUCIÓN FINANCIERA'] = df_ranking.apply(
+            lambda r: f"{r['INSTITUCIÓN FINANCIERA']} ({r['TIPO DE ENTIDAD']})"
+            if pd.notna(r.get('TIPO DE ENTIDAD'))
+            and str(r.get('TIPO DE ENTIDAD')).strip()
+            else r['INSTITUCIÓN FINANCIERA'],
+            axis=1,
+        )
+        columnas_base = [c for c in columnas_base if c.upper() != 'TIPO DE ENTIDAD']
+
+    df_ranking['Puntaje Promedio'] = df_puntajes[
+        cols_puntajes_evaluados
+    ].mean(axis=1, skipna=True)
+    df_ranking = df_ranking.sort_values(
+        by='Puntaje Promedio', ascending=False
+    ).reset_index(drop=True)
+
+    m1, m2, m3 = st.columns(3)
+
+    entidades_excluidas = (
+        'CORPORACIÓN NACIONAL DE FINANZAS POPULARES|CAJA CENTRAL FINANCOOP'
     )
+    df_lideres = df_ranking[
+        ~df_ranking['INSTITUCIÓN FINANCIERA'].str.contains(
+            entidades_excluidas, case=False, na=False
+        )
+    ]
 
-  num_periodos = opciones_periodo[periodo_sel]
-  cols_evaluadas = columnas_periodos[-num_periodos:]
-  cols_puntajes_evaluados = [f'PUNTS_{c}' for c in cols_evaluadas]
+    if not df_lideres.empty:
+        puntaje_top = df_lideres['Puntaje Promedio'].max()
+        df_top = df_lideres[df_lideres['Puntaje Promedio'] == puntaje_top]
+        lista_top = df_top['INSTITUCIÓN FINANCIERA'].tolist()
+    else:
+        lista_top = ['N/A']
+        puntaje_top = 0.0
 
-  df_ranking = df_raw.copy()
+    titulo_lider = "🥇 Líderes del Ranking" if len(lista_top) > 1 else "🥇 Líder del Ranking"
+    entidad_top_str = "<br>".join([f"• {e}" for e in lista_top]) if len(lista_top) > 1 else (lista_top[0] if lista_top else 'N/A')
 
-  if 'TIPO DE ENTIDAD' in df_ranking.columns:
-    df_ranking['INSTITUCIÓN FINANCIERA'] = df_ranking.apply(
-        lambda r: f"{r['INSTITUCIÓN FINANCIERA']} ({r['TIPO DE ENTIDAD']})"
-        if pd.notna(r.get('TIPO DE ENTIDAD'))
-        and str(r.get('TIPO DE ENTIDAD')).strip()
-        else r['INSTITUCIÓN FINANCIERA'],
-        axis=1,
-    )
-    columnas_base = [c for c in columnas_base if c.upper() != 'TIPO DE ENTIDAD']
+    promedio_general = df_ranking['Puntaje Promedio'].mean()
 
-  df_ranking['Puntaje Promedio'] = df_puntajes[
-      cols_puntajes_evaluados
-  ].mean(axis=1, skipna=True)
-  df_ranking = df_ranking.sort_values(
-      by='Puntaje Promedio', ascending=False
-  ).reset_index(drop=True)
-
-  m1, m2, m3 = st.columns(3)
-
-  entidades_excluidas = (
-      'CORPORACIÓN NACIONAL DE FINANZAS POPULARES|CAJA CENTRAL FINANCOOP'
-  )
-  df_lideres = df_ranking[
-      ~df_ranking['INSTITUCIÓN FINANCIERA'].str.contains(
-          entidades_excluidas, case=False, na=False
-      )
-  ]
-
-  entidad_top = (
-      df_lideres.iloc[0]['INSTITUCIÓN FINANCIERA']
-      if not df_lideres.empty
-      else 'N/A'
-  )
-  puntaje_top = (
-      df_lideres.iloc[0]['Puntaje Promedio'] if not df_lideres.empty else 0.0
-  )
-  promedio_general = df_ranking['Puntaje Promedio'].mean()
-
-  with m1:
-    st.markdown(
-        f"""
-        <div style="background-color: #0E1117; padding: 12px; border-radius: 8px; border: 1px solid #262730;">
-            <span style="font-size: 0.85rem; color: #FAFAFA; font-weight: 500;">🥇 Líder del Ranking</span>
-            <div style="font-size: 1.15rem; font-weight: bold; color: #FFFFFF; word-wrap: break-word; white-space: normal; line-height: 1.3; margin-top: 4px; margin-bottom: 6px;">
-                {entidad_top}
+    with m1:
+        st.markdown(
+            f"""
+            <div style="background-color: #0E1117; padding: 12px; border-radius: 8px; border: 1px solid #262730;">
+                <span style="font-size: 0.85rem; color: #FAFAFA; font-weight: 500;">{titulo_lider}</span>
+                <div style="font-size: 1.05rem; font-weight: bold; color: #FFFFFF; word-wrap: break-word; white-space: normal; line-height: 1.3; margin-top: 4px; margin-bottom: 6px;">
+                    {entidad_top_str}
+                </div>
+                <span style="background-color: #1E3A2B; color: #4ADE80; padding: 2px 8px; border-radius: 10px; font-size: 0.85rem; font-weight: bold;">
+                    ↑ {puntaje_top:.1f} pts
+                </span>
             </div>
-            <span style="background-color: #1E3A2B; color: #4ADE80; padding: 2px 8px; border-radius: 10px; font-size: 0.85rem; font-weight: bold;">
-                ↑ {puntaje_top:.1f} pts
-            </span>
-        </div>
-        """,
-        unsafe_allow_html=True,
+            """,
+            unsafe_allow_html=True,
+        )
+
+    m2.metric(
+        '📈 Promedio Sectorial',
+        f'{promedio_general:.1f} pts' if pd.notna(promedio_general) else 'N/A',
+    )
+    m3.metric('🏢 Total Entidades Evaluadas', len(df_ranking))
+
+    columnas_mostrar = columnas_base + columnas_periodos + ['Puntaje Promedio']
+    df_tabla_final = df_ranking[columnas_mostrar].copy()
+
+    renderizar_tabla_html_2d(df_tabla_final)
+
+    st.markdown('---')
+    st.subheader(f'🔍 Búsqueda e Historial Individual de {tipo_entidad}')
+
+    lista_entidades = sorted(df_raw['INSTITUCIÓN FINANCIERA'].dropna().unique())
+    entidad_seleccionada = st.selectbox(
+        '',
+        options=['-- Seleccione una entidad --'] + lista_entidades,
+        index=0,
+        key=f'search_{tipo_entidad}',
+        label_visibility='collapsed',
     )
 
-  m2.metric(
-      '📈 Promedio Sectorial',
-      f'{promedio_general:.1f} pts' if pd.notna(promedio_general) else 'N/A',
-  )
-  m3.metric('🏢 Total Entidades Evaluadas', len(df_ranking))
+    if entidad_seleccionada != '-- Seleccione una entidad --':
+        registro_entidad = df_raw[
+            df_raw['INSTITUCIÓN FINANCIERA'] == entidad_seleccionada
+        ]
+        registro_puntajes = df_puntajes[
+            df_puntajes['INSTITUCIÓN FINANCIERA'] == entidad_seleccionada
+        ]
 
-  columnas_mostrar = columnas_base + columnas_periodos + ['Puntaje Promedio']
-  df_tabla_final = df_ranking[columnas_mostrar].copy()
+        if not registro_entidad.empty:
+            st.success(f'📌 Resultados para: **{entidad_seleccionada}**')
 
-  renderizar_tabla_html_2d(df_tabla_final)
+            row_entidad = registro_entidad.iloc[0]
+            row_puntajes = registro_puntajes.iloc[0]
 
-  st.markdown('---')
-  st.subheader(f'🔍 Búsqueda e Historial Individual de {tipo_entidad}')
+            col_a, col_b, col_c = st.columns(3)
+            with col_a:
+                calificadora = row_entidad.get('FIRMA CALIFICADORA DE RIESGO', 'N/A')
+                st.info(f"**Firma Calificadora:**\n\n{calificadora}")
+            with col_b:
+                ult_col = columnas_periodos[-1]
+                ult_nota = row_entidad[ult_col]
+                st.info(f"**Última Calificación ({ult_col}):**\n\n### {ult_nota}")
+            with col_c:
+                ult_pts = row_puntajes[f'PUNTS_{ult_col}']
+                pts_texto = f'{ult_pts:.1f} / 100' if pd.notna(ult_pts) else 'N/A'
+                st.info(f"**Puntaje Numérico Actual:**\n\n### {pts_texto}")
 
-  lista_entidades = sorted(df_raw['INSTITUCIÓN FINANCIERA'].dropna().unique())
-  entidad_seleccionada = st.selectbox(
-      '',
-      options=['-- Seleccione una entidad --'] + lista_entidades,
-      index=0,
-      key=f'search_{tipo_entidad}',
-      label_visibility='collapsed',
-  )
+            st.markdown(
+                '##### 📋 Historial Completo de Calificaciones por Periodo'
+            )
+            df_historial = pd.DataFrame({
+                'Periodo de Corte': columnas_periodos,
+                'Calificación de Riesgo': [
+                    row_entidad[c] for c in columnas_periodos
+                ],
+                'Puntaje Equivalente (0-100)': [
+                    row_puntajes[f'PUNTS_{c}'] for c in columnas_periodos
+                ],
+            })
 
-  if entidad_seleccionada != '-- Seleccione una entidad --':
-    registro_entidad = df_raw[
-        df_raw['INSTITUCIÓN FINANCIERA'] == entidad_seleccionada
-    ]
-    registro_puntajes = df_puntajes[
-        df_puntajes['INSTITUCIÓN FINANCIERA'] == entidad_seleccionada
-    ]
+            renderizar_tabla_html_2d(df_historial)
 
-    if not registro_entidad.empty:
-      st.success(f'📌 Resultados para: **{entidad_seleccionada}**')
-
-      row_entidad = registro_entidad.iloc[0]
-      row_puntajes = registro_puntajes.iloc[0]
-
-      col_a, col_b, col_c = st.columns(3)
-      with col_a:
-        calificadora = row_entidad.get('FIRMA CALIFICADORA DE RIESGO', 'N/A')
-        st.info(f'**Firma Calificadora:**\n\n{calificadora}')
-      with col_b:
-        ult_col = columnas_periodos[-1]
-        ult_nota = row_entidad[ult_col]
-        st.info(f'**Última Calificación ({ult_col}):**\n\n### {ult_nota}')
-      with col_c:
-        ult_pts = row_puntajes[f'PUNTS_{ult_col}']
-        pts_texto = f'{ult_pts:.1f} / 100' if pd.notna(ult_pts) else 'N/A'
-        st.info(f'**Puntaje Numérico Actual:**\n\n### {pts_texto}')
-
-      st.markdown(
-          '##### 📋 Historial Completo de Calificaciones por Periodo'
-      )
-      df_historial = pd.DataFrame({
-          'Periodo de Corte': columnas_periodos,
-          'Calificación de Riesgo': [
-              row_entidad[c] for c in columnas_periodos
-          ],
-          'Puntaje Equivalente (0-100)': [
-              row_puntajes[f'PUNTS_{c}'] for c in columnas_periodos
-          ],
-      })
-
-      renderizar_tabla_html_2d(df_historial)
-
-  st.markdown('<div class="espaciador-inferior"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="espaciador-inferior"></div>', unsafe_allow_html=True)
 
 
 with tab_coop:
-  procesar_vista_tab(df_coop_raw, 'Cooperativas')
+    procesar_vista_tab(df_coop_raw, 'Cooperativas')
 
 with tab_bancos:
-  procesar_vista_tab(df_bancos_raw, 'Bancos')
+    procesar_vista_tab(df_bancos_raw, 'Bancos')
 
 if __name__ == '__main__':
-  if 'streamlit' not in sys.argv[0]:
-    os.system(f'streamlit run "{__file__}" --server.port 8501')
+    if 'streamlit' not in sys.argv[0]:
+        os.system(f'streamlit run "{__file__}" --server.port 8501')
