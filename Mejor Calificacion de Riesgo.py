@@ -2,7 +2,6 @@ import io
 import os
 import re
 import sys
-import webbrowser
 import numpy as np
 import pandas as pd
 import requests
@@ -34,13 +33,6 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
-
-if "browser_opened" not in st.session_state:
-    st.session_state["browser_opened"] = True
-    try:
-        webbrowser.open("http://localhost:8501")
-    except Exception:
-        pass
 
 # =========================================================================
 # TÍTULO PRINCIPAL Y BOTÓN DE REFRESCAR
@@ -463,7 +455,3 @@ with tab_coop:
 
 with tab_bancos:
     procesar_vista_tab(df_bancos_raw, 'Bancos')
-
-if __name__ == '__main__':
-    if 'streamlit' not in sys.argv[0]:
-        os.system(f'streamlit run "{__file__}" --server.port 8501')
