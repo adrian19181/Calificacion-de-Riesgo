@@ -2,10 +2,16 @@ import io
 import os
 import re
 import sys
+import datetime
 import numpy as np
 import pandas as pd
 import requests
 import streamlit as st
+
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 # =========================================================================
 # CONFIGURACIÓN GENERAL Y OPTIMIZACIÓN MÓVIL
@@ -29,23 +35,15 @@ st.markdown(
     .espaciador-inferior {
         height: 80px;
     }
+    .stButton > button, .stDownloadButton > button {
+        padding: 0.35rem 0.2rem !important;
+        font-size: 0.78rem !important;
+        font-weight: 700 !important;
+        border-radius: 8px !important;
+    }
     </style>
 """,
     unsafe_allow_html=True,
-)
-
-# =========================================================================
-# TÍTULO PRINCIPAL Y BOTÓN DE REFRESCAR
-# =========================================================================
-st.title("🏆 Mejor Calificación de Riesgo")
-
-if st.button("🔄 Refrescar y Recalcular Todo", use_container_width=True):
-    st.cache_data.clear()
-    st.rerun()
-
-FILE_ID = "1ZtmezQ9fQfpUmpRdHa66Fp0j733j5qwv"
-URL_DRIVE_DOWNLOAD = (
-    f"https://drive.google.com/uc?export=download&id={FILE_ID}"
 )
 
 # =========================================================================
@@ -91,6 +89,197 @@ def obtener_puntaje_nota(nota):
         return np.mean(puntajes) if puntajes else np.nan
 
     return TABLA_EQUIVALENCIAS.get(nota_limpia, np.nan)
+
+
+# =========================================================================
+# FUNCIÓN GENERADORA DE PDF CACHEADA (OPTIMIZA VELOCIDAD DE CARGA)
+# =========================================================================
+@st.cache_data(ttl=600)
+def generar_pdf_reporte_cached(datos_coop_mis, datos_coop_top, datos_bancos_mis, datos_bancos_top):
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=30,
+        leftMargin=30,
+        topMargin=30,
+        bottomMargin=30
+    )
+    story = []
+    styles = getSampleStyleSheet()
+
+    style_title = ParagraphStyle('DocTitle', parent=styles['Heading1'], fontSize=16, leading=18, textColor=colors.HexColor('#1F2937'), spaceAfter=4)
+    style_sub = ParagraphStyle('DocSub', parent=styles['Normal'], fontSize=9, leading=11, textColor=colors.HexColor('#4B5563'), spaceAfter=10)
+    style_h2 = ParagraphStyle('DocH2', parent=styles['Heading2'], fontSize=11, leading=13, textColor=colors.HexColor('#1E3A8A'), spaceBefore=8, spaceAfter=4)
+    style_cell = ParagraphStyle('DocCell', parent=styles['Normal'], fontSize=7.5, leading=9, textColor=colors.HexColor('#000000'))
+    style_cell_bold = ParagraphStyle('DocCellBold', parent=style_cell, fontName='Helvetica-Bold')
+    style_cell_header = ParagraphStyle('DocCellHeader', parent=style_cell, fontName='Helvetica-Bold', textColor=colors.white, alignment=1)
+
+    fecha_hoy = datetime.date.today().strftime('%d/%m/%Y')
+    story.append(Paragraph("🏆 Reporte Calificación de Riesgo - Entidades Financieras", style_title))
+    story.append(Paragraph(f"Consolidado de Calificaciones y Puntajes Numéricos | Fecha: {fecha_hoy}", style_sub))
+
+    # 1. MIS COOPERATIVAS
+    story.append(Paragraph("⭐ 1. Mis Entidades - Cooperativas (Segmento 1)", style_h2))
+    if datos_coop_mis:
+        headers = datos_coop_mis[0]
+        rows = datos_coop_mis[1:]
+        t_data = [[Paragraph(str(h), style_cell_header) for h in headers]]
+        for r in rows:
+            t_data.append([Paragraph(str(val), style_cell_bold if idx == 0 else style_cell) for idx, val in enumerate(r)])
+        col_w = [160] + [int(392 / max(1, len(headers) - 1))] * (len(headers) - 1)
+        t_tbl = Table(t_data, colWidths=col_w)
+        t_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1F2937')),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#000000')),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('TOPPADDING', (0,0), (-1,-1), 3),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ]))
+        story.append(t_tbl)
+    else:
+        story.append(Paragraph("Sin registros disponibles.", style_cell))
+    story.append(Spacer(1, 8))
+
+    # 2. TOP COOPERATIVAS
+    story.append(Paragraph("🏦 2. Top Ranking Cooperativas (Segmento 1)", style_h2))
+    if datos_coop_top:
+        headers = datos_coop_top[0]
+        rows = datos_coop_top[1:]
+        t_data = [[Paragraph(str(h), style_cell_header) for h in headers]]
+        for r in rows:
+            t_data.append([Paragraph(str(val), style_cell_bold if idx == 0 else style_cell) for idx, val in enumerate(r)])
+        col_w = [160] + [int(392 / max(1, len(headers) - 1))] * (len(headers) - 1)
+        t_tbl = Table(t_data, colWidths=col_w)
+        t_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#059669')),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#000000')),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('TOPPADDING', (0,0), (-1,-1), 2.5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+        ]))
+        story.append(t_tbl)
+    else:
+        story.append(Paragraph("Sin registros disponibles.", style_cell))
+    story.append(Spacer(1, 8))
+
+    # 3. MIS BANCOS
+    story.append(Paragraph("⭐ 3. Mis Entidades - Bancos", style_h2))
+    if datos_bancos_mis:
+        headers = datos_bancos_mis[0]
+        rows = datos_bancos_mis[1:]
+        t_data = [[Paragraph(str(h), style_cell_header) for h in headers]]
+        for r in rows:
+            t_data.append([Paragraph(str(val), style_cell_bold if idx == 0 else style_cell) for idx, val in enumerate(r)])
+        col_w = [160] + [int(392 / max(1, len(headers) - 1))] * (len(headers) - 1)
+        t_tbl = Table(t_data, colWidths=col_w)
+        t_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1F2937')),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#000000')),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('TOPPADDING', (0,0), (-1,-1), 3),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ]))
+        story.append(t_tbl)
+    else:
+        story.append(Paragraph("Sin registros disponibles.", style_cell))
+    story.append(Spacer(1, 8))
+
+    # 4. TOP BANCOS
+    story.append(Paragraph("🏛️ 4. Top Ranking Bancos", style_h2))
+    if datos_bancos_top:
+        headers = datos_bancos_top[0]
+        rows = datos_bancos_top[1:]
+        t_data = [[Paragraph(str(h), style_cell_header) for h in headers]]
+        for r in rows:
+            t_data.append([Paragraph(str(val), style_cell_bold if idx == 0 else style_cell) for idx, val in enumerate(r)])
+        col_w = [160] + [int(392 / max(1, len(headers) - 1))] * (len(headers) - 1)
+        t_tbl = Table(t_data, colWidths=col_w)
+        t_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1E3A8A')),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#000000')),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('TOPPADDING', (0,0), (-1,-1), 2.5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+        ]))
+        story.append(t_tbl)
+    else:
+        story.append(Paragraph("Sin registros disponibles.", style_cell))
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def df_a_lista_pdf(df, limite=None):
+    if df is None or df.empty:
+        return []
+    target_df = df.head(limite) if limite else df
+    headers = list(target_df.columns)
+    rows = []
+    for _, row in target_df.iterrows():
+        r_vals = []
+        for col, val in row.items():
+            if pd.isna(val):
+                r_vals.append("N/A")
+            elif isinstance(val, float):
+                r_vals.append(f"{val:.1f}")
+            else:
+                r_vals.append(str(val))
+        rows.append(r_vals)
+    return [headers] + rows
+
+
+def procesar_datos_para_pdf(df_raw, tipo_entidad):
+    if df_raw is None or df_raw.empty:
+        return pd.DataFrame(), pd.DataFrame()
+
+    columnas_base = [c for c in df_raw.columns if not c.startswith('AL ')]
+    if tipo_entidad == 'Cooperativas':
+        columnas_base = [c for c in columnas_base if c.upper() != 'SEGMENTO']
+    if 'INSTITUCIÓN FINANCIERA' in columnas_base:
+        columnas_base.remove('INSTITUCIÓN FINANCIERA')
+        columnas_base = ['INSTITUCIÓN FINANCIERA'] + columnas_base
+
+    columnas_periodos = [c for c in df_raw.columns if c.startswith('AL ')]
+
+    df_puntajes = df_raw.copy()
+    for col in columnas_periodos:
+        df_puntajes[f'PUNTS_{col}'] = df_raw[col].apply(obtener_puntaje_nota)
+
+    df_ranking = df_raw.copy()
+    if 'TIPO DE ENTIDAD' in df_ranking.columns:
+        df_ranking['INSTITUCIÓN FINANCIERA'] = df_ranking.apply(
+            lambda r: f"{r['INSTITUCIÓN FINANCIERA']} ({r['TIPO DE ENTIDAD']})"
+            if pd.notna(r.get('TIPO DE ENTIDAD')) and str(r.get('TIPO DE ENTIDAD')).strip()
+            else r['INSTITUCIÓN FINANCIERA'],
+            axis=1,
+        )
+        columnas_base = [c for c in columnas_base if c.upper() != 'TIPO DE ENTIDAD']
+
+    df_ranking['Puntaje Promedio'] = df_puntajes[
+        [f'PUNTS_{c}' for c in columnas_periodos]
+    ].mean(axis=1, skipna=True)
+
+    df_ranking = df_ranking.sort_values(
+        by='Puntaje Promedio', ascending=False
+    ).reset_index(drop=True)
+
+    columnas_mostrar = columnas_base + columnas_periodos + ['Puntaje Promedio']
+    df_tabla_final = df_ranking[columnas_mostrar].copy()
+
+    if tipo_entidad == 'Cooperativas':
+        cond_mis = df_tabla_final['INSTITUCIÓN FINANCIERA'].str.contains(
+            'JARDIN AZUAYO|JARDÍN AZUAYO', case=False, na=False
+        ) | (
+            df_tabla_final['INSTITUCIÓN FINANCIERA'].str.contains('MUTUALISTA', case=False, na=False)
+            & df_tabla_final['INSTITUCIÓN FINANCIERA'].str.contains('AZUAY', case=False, na=False)
+        )
+    else:
+        cond_mis = df_tabla_final['INSTITUCIÓN FINANCIERA'].str.contains('AUSTRO|PRODUBANCO', case=False, na=False)
+
+    df_mis_entidades = df_tabla_final[cond_mis].copy()
+    return df_tabla_final, df_mis_entidades
 
 
 # =========================================================================
@@ -208,6 +397,11 @@ def renderizar_tabla_html_2d(df):
     st.markdown(''.join(html), unsafe_allow_html=True)
 
 
+FILE_ID = "1ZtmezQ9fQfpUmpRdHa66Fp0j733j5qwv"
+URL_DRIVE_DOWNLOAD = (
+    f"https://drive.google.com/uc?export=download&id={FILE_ID}"
+)
+
 @st.cache_data(ttl=300)
 def cargar_datos_desde_drive():
     try:
@@ -240,6 +434,36 @@ df_coop_raw, df_bancos_raw = cargar_datos_desde_drive()
 
 if df_coop_raw is None or df_bancos_raw is None:
     st.stop()
+
+# =========================================================================
+# TÍTULO PRINCIPAL Y BOTONES SUPERIORES (REFRESCAR Y PDF)
+# =========================================================================
+st.title("🏆 Mejor Calificación de Riesgo")
+
+df_coop_pdf_final, df_coop_pdf_mis = procesar_datos_para_pdf(df_coop_raw, 'Cooperativas')
+df_bancos_pdf_final, df_bancos_pdf_mis = procesar_datos_para_pdf(df_bancos_raw, 'Bancos')
+
+pdf_bytes = generar_pdf_reporte_cached(
+    tuple(df_a_lista_pdf(df_coop_pdf_mis)),
+    tuple(df_a_lista_pdf(df_coop_pdf_final, limite=15)),
+    tuple(df_a_lista_pdf(df_bancos_pdf_mis)),
+    tuple(df_a_lista_pdf(df_bancos_pdf_final, limite=15))
+)
+
+col_btn1, col_btn2 = st.columns(2)
+with col_btn1:
+    if st.button("🔄 Refrescar y Recalcular Todo", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
+
+with col_btn2:
+    st.download_button(
+        label="📄 Exportar a PDF",
+        data=pdf_bytes,
+        file_name="Calif. Riesgo.pdf",
+        mime="application/pdf",
+        use_container_width=True
+    )
 
 # =========================================================================
 # ESTRUCTURA DE PESTAÑAS Y PROCESAMIENTO
